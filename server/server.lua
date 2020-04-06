@@ -3,52 +3,42 @@ truyna			={}
 
 TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
 
-RegisterServerEvent("esx-wanted:sendhead")
-AddEventHandler("esx-wanted:sendhead", function(url)
-	TriggerClientEvent("esx-wanted:nhanhead", -1, url)
+RegisterServerEvent("esx-wanted:sendMugshot")
+AddEventHandler("esx-wanted:sendMugshot", function(url)
+	TriggerClientEvent("esx-wanted:syncMugshot", -1, url)
 end)
 
-RegisterServerEvent("esx-wanted:vitri")
-AddEventHandler("esx-wanted:vitri", function(coords)
+RegisterServerEvent("esx-wanted:location")
+AddEventHandler("esx-wanted:location", function(coords)
 	local xPlayer = ESX.GetPlayerFromId(source)
 	local name = xPlayer.getName()
-	TriggerClientEvent("esx-wanted:hienblip", -1, source, coords, name)
+	TriggerClientEvent("esx-wanted:showBlip", -1, source, coords, name)
 end)
 
 RegisterCommand("wanted", function(src, args, raw)
-
 	local xPlayer = ESX.GetPlayerFromId(src)
-	
-
 	if xPlayer["job"]["name"] == "police" then
-
 		local wantedPlayer = args[1]
 		local wantedTime = tonumber(args[2])
 		local wantedReason = args[3]
-
 		if GetPlayerName(wantedPlayer) ~= nil then
-
 			if wantedTime ~= nil then
-				TriggerClientEvent('mythic_notify:client:SendAlert', wantedPlayer, { type = 'inform', text = "server gethead"})
-				TriggerClientEvent('mythic_notify:client:SendAlert', -1, { type = 'inform', text = "server gethead toan server"})
-				TriggerClientEvent("esx-wanted:gethead", wantedPlayer, wantedPlayer)
+				TriggerClientEvent("esx-wanted:getMugshot", wantedPlayer, wantedPlayer)
 				WantedPlayer(wantedPlayer, wantedTime, wantedReason)
-
-				TriggerClientEvent("esx:showNotification", src, GetPlayerName(wantedPlayer) .. " bi truy na trong " .. wantedTime .. " phut!")
-				
+				TriggerClientEvent("esx:showNotification", src, GetPlayerName(wantedPlayer) .. " wanted in " .. wantedTime .. " min!")				
 				if args[3] ~= nil then
 					GetWantedPlayerName(wantedPlayer, function(Firstname, Lastname)
-						TriggerClientEvent('chat:addMessage', -1, { args = { "WANTED",  Firstname .. " " .. Lastname .. " đang bị truy nã với lý do: " .. args[3] }, color = { 249, 166, 0 } })
+						TriggerClientEvent('chat:addMessage', -1, { args = { "WANTED",  Firstname .. " " .. Lastname .. " is wanted for reason: " .. args[3] }, color = { 249, 166, 0 } })
 					end)
 				end
 			else
-				TriggerClientEvent("esx:showNotification", src, "Thoi gian khong hop le!")
+				TriggerClientEvent("esx:showNotification", src, "Time is invalid!")
 			end
 		else
-			TriggerClientEvent("esx:showNotification", src, "ID nay khong online!")
+			TriggerClientEvent("esx:showNotification", src, "This ID is not online!")
 		end
 	else
-		TriggerClientEvent("esx:showNotification", src, "Ban khong co quyen truy na!")
+		TriggerClientEvent("esx:showNotification", src, "You are not a cop!")
 	end
 end)
 
@@ -63,10 +53,10 @@ RegisterCommand("unwanted", function(src, args)
 		if GetPlayerName(wantedPlayer) ~= nil then
 			UnWanted(wantedPlayer)
 		else
-			TriggerClientEvent("esx:showNotification", src, "ID nay khong online!")
+			TriggerClientEvent("esx:showNotification", src, "This ID is not online!")
 		end
 	else
-		TriggerClientEvent("esx:showNotification", src, "Ban khong co quyen truy na!")
+		TriggerClientEvent("esx:showNotification", src, "You are not a cop!")
 	end
 end)
 
@@ -130,12 +120,9 @@ function UnWanted(wantedPlayer)
 end
 
 function EditwantedTime(source, wantedTime)
-
 	local src = source
-
 	local xPlayer = ESX.GetPlayerFromId(src)
 	local Identifier = xPlayer.identifier
-
 	MySQL.Async.execute(
        "UPDATE users SET wanted = @newWantedTime WHERE identifier = @identifier",
         {
@@ -147,46 +134,31 @@ end
 
 function GetWantedPlayerName(playerId, data)
 	local Identifier = ESX.GetPlayerFromId(playerId).identifier
-
 	MySQL.Async.fetchAll("SELECT firstname, lastname FROM users WHERE identifier = @identifier", { ["@identifier"] = Identifier }, function(result)
-
 		data(result[1].firstname, result[1].lastname)
-
 	end)
 end
 
-ESX.RegisterServerCallback("esx-wanted:retrieveWantededPlayers", function(source, cb)
-	
+ESX.RegisterServerCallback("esx-wanted:retrieveWantededPlayers", function(source, cb)	
 	local wantededPersons = {}
-
 	MySQL.Async.fetchAll("SELECT firstname, lastname, wanted, identifier FROM users WHERE wanted > @wanted", { ["@wanted"] = 0 }, function(result)
-
 		for i = 1, #result, 1 do
 			table.insert(wantededPersons, { name = result[i].firstname .. " " .. result[i].lastname, wantedTime = result[i].wanted, identifier = result[i].identifier })
 		end
-
 		cb(wantededPersons)
 	end)
 end)
 
 ESX.RegisterServerCallback("esx-wanted:retrieveWantedTime", function(source, cb)
-
 	local src = source
-
 	local xPlayer = ESX.GetPlayerFromId(src)
 	local Identifier = xPlayer.identifier
-
-
 	MySQL.Async.fetchAll("SELECT wanted FROM users WHERE identifier = @identifier", { ["@identifier"] = Identifier }, function(result)
-
 		local WantedTime = tonumber(result[1].wanted)
-
 		if WantedTime ~= nil and WantedTime > 0 then
-
 			cb(true, WantedTime)
 		else
 			cb(false, 0)
 		end
-
 	end)
 end)

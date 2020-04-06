@@ -1,1 +1,2 @@
-ALTER TABLE users add wanted BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE `users`
+	ADD COLUMN `wanted` INT NULL DEFAULT '0' AFTER `position`;

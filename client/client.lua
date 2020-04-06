@@ -12,7 +12,6 @@ local Keys = {
 ESX = nil
 PlayerData = {}
 local wantedTime = 0
-local blip2 = nil
 local wantedBlip = {}
 
 Citizen.CreateThread(function()
@@ -43,19 +42,19 @@ AddEventHandler("esx:setJob", function(response)
 	PlayerData["job"] = response
 end)
 
-RegisterNetEvent("esx-wanted:gethead")
-AddEventHandler("esx-wanted:gethead", function(tartgetPed)
+RegisterNetEvent("esx-wanted:getMugshot")
+AddEventHandler("esx-wanted:getMugshot", function(tartgetPed)
 	local mugshot, mugshotStr = ESX.Game.GetPedMugshot(PlayerPedId())
-	ESX.ShowAdvancedNotification('WANTED', '<FONT FACE="Tahoma">TRUY NA', 'Thông báo truy nã đối tượng '..GetPlayerName(GetPlayerFromServerId(tartgetPed)), mugshotStr, 1)
+	ESX.ShowAdvancedNotification('WANTED', 'WANTED', 'WANTED '..GetPlayerName(GetPlayerFromServerId(tartgetPed)), mugshotStr, 1)
 	UnregisterPedheadshot(mugshot)
-	exports['mugshotbk']:getMugshotUrl(PlayerPedId(), function ( url )
+	exports['mugshot']:getMugshotUrl(PlayerPedId(), function ( url )
 		print(url)
-		TriggerServerEvent("esx-wanted:sendhead", url)
+		TriggerServerEvent("esx-wanted:sendMugshot", url)
 	end)
 end)
 
-RegisterNetEvent("esx-wanted:nhanhead")
-AddEventHandler("esx-wanted:nhanhead", function(url)
+RegisterNetEvent("esx-wanted:syncMugshot")
+AddEventHandler("esx-wanted:syncMugshot", function(url)
 	SendNUIMessage(
 		{
 			update = true,
@@ -65,27 +64,27 @@ AddEventHandler("esx-wanted:nhanhead", function(url)
 end)
 
 RegisterNetEvent("esx-wanted:openui")
-AddEventHandler("esx-wanted:openui", function(ten, thoigian, id, lydo)	
-	tg = tonumber(thoigian)
+AddEventHandler("esx-wanted:openui", function(name, time, id, reason)	
+	tg = tonumber(time)
 	if tg < 60 then
 		h = 0
-		m = thoigian
+		m = time
 	else
-		h = math.floor(thoigian / 60)
-		m = thoigian - (h * 60)
+		h = math.floor(time / 60)
+		m = time - (h * 60)
 	end
 	SendNUIMessage(
 		{
 			display = true,
-			ten = ten,
-			thoigian = thoigian,
+			ten = name,
+			thoigian = time,
 			id = id,
-			lydo = lydo,
+			lydo = reason,
 			h = h,
 			m = thoigian,
 		}
 	)
-	Citizen.Wait(60000)
+	Citizen.Wait(60000)			---Wait 60s and close UI
 	SendNUIMessage(
 		{
 			display = false,
@@ -93,8 +92,8 @@ AddEventHandler("esx-wanted:openui", function(ten, thoigian, id, lydo)
 	)
 end)
 
-RegisterNetEvent("esx-wanted:hienblip")
-AddEventHandler("esx-wanted:hienblip", function(target, blip, name)
+RegisterNetEvent("esx-wanted:showBlip")
+AddEventHandler("esx-wanted:showBlip", function(target, blip, name)
 	if wantedBlip[target] ~= nil then 
 		RemoveBlip(wantedBlip[target])
 		wantedBlip[target] = nil 
@@ -127,42 +126,21 @@ RegisterNetEvent("esx-wanted:wantedPlayer")
 AddEventHandler("esx-wanted:wantedPlayer", function(newWantedTime)
 	wantedTime = newWantedTime
 	InWanted()
-	TriggerEvent("pNotify:SendNotification",{
-					text = "<b style='color:#1E90FF'>Bạn đang bị truy nã trong thời gian :</b>".. wantedTime .. "Phút ",
-					type = "warning",
-					timeout = (6000),
-					layout = "topcenter",
-					queue = "global"
-			})
 end)
 
 RegisterNetEvent("esx-wanted:unWantedPlayer")
 AddEventHandler("esx-wanted:unWantedPlayer", function()
 	wantedTime = 0
-
 	UnWanted()
 end)
 
 function WantedLogin()
-	InWanted()
-	TriggerEvent("pNotify:SendNotification",{
-					text = "<b style='color:#1E90FF'>Lần trước bạn bị truy nã xong quit nên giờ bạn vẫn đang bị truy nã</b>",
-					type = "error",
-					timeout = (6000),
-					layout = "topcenter",
-					queue = "global"
-				})	
+	InWanted()	
 end
 
 function UnWanted()
 	TriggerServerEvent('esx-wanted:unWanted')
-	TriggerEvent("pNotify:SendNotification",{
-					text = "<b style='color:#1E90FF'>Bạn đã hết bị truy nã</b>",
-					type = "error",
-					timeout = (6000),
-					layout = "topcenter",
-					queue = "global"
-				})
+	ESX.ShowNotification('unwanted-notification')
 end
 
 RegisterNetEvent('esx-wanted:unWanted')
@@ -173,92 +151,86 @@ AddEventHandler('esx-wanted:unWanted', function(target)
 	end
 end)
 
+-----SEND LOCATION-----
+
 function InWanted()
 	Citizen.CreateThread(function()
 		while wantedTime > 0  do
-			TriggerEvent("pNotify:SendNotification",{
-				text = "<b style='color:#1E90FF'>Bạn đang bị truy nã với thời gian</b>" .. wantedTime .. " phút ",
-				type = "warning",
-				timeout = (60000),
-				layout = "topcenter",
-				queue = "global"
-			})
 			local playerPed = PlayerPedId()
 			local PedPosition = GetEntityCoords(playerPed)
-			TriggerServerEvent("esx-wanted:vitri", PedPosition)
+			TriggerServerEvent("esx-wanted:location", PedPosition)
 			Wait(15000)
 			local PedPosition = GetEntityCoords(playerPed)
-			TriggerServerEvent("esx-wanted:vitri", PedPosition)
+			TriggerServerEvent("esx-wanted:location", PedPosition)
 			Wait(15000)
 			local PedPosition = GetEntityCoords(playerPed)
-			TriggerServerEvent("esx-wanted:vitri", PedPosition)
+			TriggerServerEvent("esx-wanted:location", PedPosition)
 			Wait(15000)
 			local PedPosition = GetEntityCoords(playerPed)
-			TriggerServerEvent("esx-wanted:vitri", PedPosition)
+			TriggerServerEvent("esx-wanted:location", PedPosition)
 			Wait(15000)
 			local PedPosition = GetEntityCoords(playerPed)
-			TriggerServerEvent("esx-wanted:vitri", PedPosition)
+			TriggerServerEvent("esx-wanted:location", PedPosition)
 			wantedTime = wantedTime - 1
 			if wantedTime == 0 then
 				UnWanted()
 				TriggerServerEvent("esx-wanted:updateWantedTime", 0)
-			end
-			
+			end			
 			TriggerServerEvent("esx-wanted:updateWantedTime", wantedTime)
 		end		
 	end)
 end
+
+-----COMMAND-----
+
 RegisterCommand("wantedmenu", function(source, args)
-	--OpenWantedMenu()
 	if PlayerData.job.name == "police" then
 		OpenWantedMenu()
 	else
-		ESX.ShowNotification("Bạn không phải là cảnh sát!")
+		ESX.ShowNotification("you/'re not POLICE!")
 	end
 end)
+
+-----WANTED MENU------
 
 function OpenWantedMenu()
 	ESX.UI.Menu.Open(
 		'default', GetCurrentResourceName(), 'wanted_prison_menu',
 		{
-			title    = "Quản lý truy nã",
+			title    = "Wanted",
 			align    = 'center',
 			elements = {
-				{ label = "Truy nã người chơi", value = "wanted_closest_player" },
-				{ label = "Quản lý người chơi trong DS truy nã", value = "unwanted_player" }
+				{ label = "Wanted Player", value = "wanted_closest_player" },
+				{ label = "Wanted List", value = "unwanted_player" }
 			}
 		}, 
 	function(data, menu)
-
 		local action = data.current.value
-
 		if action == "wanted_closest_player" then
-
 			menu.close()
-
 			ESX.UI.Menu.Open(
           		'dialog', GetCurrentResourceName(), 'wanted_choose_id',
           		{
-            		title = "ID người chơi"
+            		title = "Player ID"
           		},
           	function(data2, menu2)
-
             	local targetId = tonumber(data2.value)
-
             	if targetId == nil then
-              		ESX.ShowNotification("Bạn chưa nhập id người cần truy nã")
+					ESX.ShowNotification("You have not entered the player id")
+				elseif GetPlayerFromServerId(targetId) == 0 then 
+					ESX.ShowNotification("Invalid ID")
             	else
               		menu2.close()
 					ESX.UI.Menu.Open('dialog', GetCurrentResourceName(), 'wanted_time', {
-						title = "Thời gian truy nã"
+						title = "wanted time"
 					}, function(data3 , menu3)
 						local time = tonumber(data3.value)
 						if time == nil or time == 0 then 
-							ESX.ShowNotification("Bạn chưa nhập thời gian truy nã")
+							ESX.ShowNotification("You have not entered the wanted time")
 						else 
 							menu3.close()
 							ESX.UI.Menu.Open('dialog', GetCurrentResourceName(), 'wanted_reason', {
-								title = 'Lý do truy nã'
+								title = 'Wanted reason'
 							}, function(data4, menu4)
 								local reason = data4.value
 								TriggerServerEvent('esx-wanted:wantedPlayer', targetId, time, reason)
@@ -275,42 +247,31 @@ function OpenWantedMenu()
 				menu2.close()
 			end)
 		elseif action == "unwanted_player" then
-
 			local elements = {}
-
 			ESX.TriggerServerCallback("esx-wanted:retrieveWantededPlayers", function(playerArray)
-
 				if #playerArray == 0 then
-					ESX.ShowNotification("Không có ai trong danh sách truy nã")
+					ESX.ShowNotification("No one on the wanted list")
 					return
 				end
-
 				for i = 1, #playerArray, 1 do
-					table.insert(elements, {label = "Truy Nã: " .. playerArray[i].name .. " | Thời Gian: " .. playerArray[i].wantedTime .. " Phút", value = playerArray[i].identifier })
+					table.insert(elements, {label = "Player: " .. playerArray[i].name .. " | Wanted time: " .. playerArray[i].wantedTime .. " min", value = playerArray[i].identifier })
 				end
-
 				ESX.UI.Menu.Open(
 					'default', GetCurrentResourceName(), 'wanted_unwanted_menu',
 					{
-						title = "Danh sách truy nã",
+						title = "Wanted list",
 						align = "center",
 						elements = elements
 					},
 				function(data2, menu2)
-
 					local action = data2.current.value
-
 					TriggerServerEvent("esx-wanted:unWantedPlayer", action)
-
 					menu2.close()
-
 				end, function(data2, menu2)
 					menu2.close()
 				end)
 			end)
-
 		end
-
 	end, function(data, menu)
 		menu.close()
 	end)	
