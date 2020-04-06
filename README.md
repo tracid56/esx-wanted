@@ -9,6 +9,7 @@ Feature:
   
 Required:
   - Install modified <a href="https://github.com/jonassvensson4/screenshot-basic">screenshot-basic</a> resource.
+  - Install mugshot <a href="https://github.com/jonassvensson4/mugshot">mugshot</a> resource.
   - Add `start mugshot`to your server.cfg. <br>Remember to start it after screenshot-basic and before esx-wanted.
   - of course, we need es_extended
   
